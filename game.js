@@ -30,9 +30,9 @@
 
   const kitty = {
     x: W / 2,
-    y: H - 95,
-    w: 100,
-    h: 95,
+    y: H - 75,
+    w: 74,
+    h: 70,
     speed: 440, // px/sec (keyboard)
     targetX: W / 2,
     facing: 1,
@@ -41,6 +41,70 @@
   };
 
   const input = { left: false, right: false, mouseX: null };
+
+  // ---------- Jumpscare ----------
+  const jumpscare = {
+    active: false,
+    timer: 0,
+    duration: 0,
+    nextTime: 5 + Math.random() * 8, // seconds until first jumpscare
+    variant: 0,
+    flash: 0,
+  };
+
+  let audioCtx = null;
+  function playScreamSound() {
+    try {
+      if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        audioCtx = new Ctx();
+      }
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      const now = audioCtx.currentTime;
+
+      // Screeching sawtooth wail
+      const osc = audioCtx.createOscillator();
+      const oscGain = audioCtx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(1100, now);
+      osc.frequency.exponentialRampToValueAtTime(90, now + 0.55);
+      oscGain.gain.setValueAtTime(0.0001, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.35, now + 0.02);
+      oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+      osc.connect(oscGain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.62);
+
+      // White noise burst for extra scare
+      const bufSize = Math.floor(audioCtx.sampleRate * 0.5);
+      const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) {
+        const env = Math.pow(1 - i / bufSize, 2);
+        data[i] = (Math.random() * 2 - 1) * env;
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(0.25, now);
+      src.connect(ng).connect(audioCtx.destination);
+      src.start(now);
+    } catch (e) {}
+  }
+
+  function triggerJumpscare() {
+    jumpscare.active = true;
+    jumpscare.duration = 0.55 + Math.random() * 0.35;
+    jumpscare.timer = jumpscare.duration;
+    jumpscare.variant = Math.floor(Math.random() * 3);
+    jumpscare.flash = 1;
+    playScreamSound();
+  }
+
+  function scheduleNextJumpscare() {
+    jumpscare.nextTime = 6 + Math.random() * 12;
+  }
 
   // ---------- Background decoration ----------
   function initBackground() {
@@ -161,6 +225,10 @@
     state.spawnTimer = 0;
     kitty.x = W / 2;
     kitty.targetX = W / 2;
+    jumpscare.active = false;
+    jumpscare.timer = 0;
+    jumpscare.flash = 0;
+    jumpscare.nextTime = 5 + Math.random() * 8;
     updateHUD();
     hideOverlay();
     state.lastTime = performance.now();
@@ -237,6 +305,22 @@
 
   // ---------- Update ----------
   function update(dt) {
+    // Jumpscare freeze — pause gameplay while the scare is shown
+    if (jumpscare.active) {
+      jumpscare.timer -= dt;
+      jumpscare.flash = Math.max(0, jumpscare.flash - dt * 1.8);
+      if (jumpscare.timer <= 0) {
+        jumpscare.active = false;
+        scheduleNextJumpscare();
+      }
+      return;
+    }
+    jumpscare.nextTime -= dt;
+    if (jumpscare.nextTime <= 0) {
+      triggerJumpscare();
+      return;
+    }
+
     // Kitty movement
     if (input.mouseX !== null) {
       kitty.targetX = input.mouseX;
@@ -1120,6 +1204,200 @@
     ctx.globalAlpha = 1;
   }
 
+  function drawJumpscare() {
+    const progress = 1 - jumpscare.timer / jumpscare.duration; // 0 → 1
+    const cx = W / 2;
+    const cy = H / 2;
+
+    // Violent red/black flash on the first moments
+    const flashA = Math.min(1, jumpscare.flash + (progress < 0.1 ? 0.8 : 0));
+    ctx.save();
+    ctx.fillStyle = `rgba(139, 0, 18, ${0.55 * flashA + 0.45})`;
+    ctx.fillRect(0, 0, W, H);
+    // black vignette
+    const vg = ctx.createRadialGradient(cx, cy, 60, cx, cy, Math.max(W, H));
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(0,0,0,0.95)");
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+
+    // Screen shake
+    const shakeAmt = 16 * (1 - progress) + 4;
+    ctx.save();
+    ctx.translate(
+      (Math.random() - 0.5) * shakeAmt,
+      (Math.random() - 0.5) * shakeAmt
+    );
+
+    // Face pops in: scales from small to massive very quickly
+    const easeIn = Math.min(1, progress * 3);
+    const scale = 0.4 + easeIn * 1.4;
+
+    // ---- Face silhouette (pure black) ----
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 10, 260 * scale, 310 * scale, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ears / horns (variant based)
+    ctx.fillStyle = "#000";
+    ctx.strokeStyle = "#3a0008";
+    ctx.lineWidth = 4;
+    const hornH = 140 * scale;
+    // left horn
+    ctx.beginPath();
+    ctx.moveTo(cx - 180 * scale, cy - 150 * scale);
+    ctx.quadraticCurveTo(cx - 230 * scale, cy - 260 * scale, cx - 120 * scale, cy - 240 * scale);
+    ctx.quadraticCurveTo(cx - 140 * scale, cy - 170 * scale, cx - 180 * scale, cy - 150 * scale);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // right horn
+    ctx.beginPath();
+    ctx.moveTo(cx + 180 * scale, cy - 150 * scale);
+    ctx.quadraticCurveTo(cx + 230 * scale, cy - 260 * scale, cx + 120 * scale, cy - 240 * scale);
+    ctx.quadraticCurveTo(cx + 140 * scale, cy - 170 * scale, cx + 180 * scale, cy - 150 * scale);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // ---- Glowing red eyes ----
+    const eyeY = cy - 40 * scale;
+    const eyeDX = 95 * scale;
+    const eyeR = 48 * scale;
+    // outer glow
+    for (let i = 0; i < 2; i++) {
+      const ex = cx + (i === 0 ? -eyeDX : eyeDX);
+      const g = ctx.createRadialGradient(ex, eyeY, 5, ex, eyeY, eyeR * 2.2);
+      g.addColorStop(0, "rgba(255, 40, 50, 0.95)");
+      g.addColorStop(0.4, "rgba(230, 0, 32, 0.6)");
+      g.addColorStop(1, "rgba(139, 0, 18, 0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(ex, eyeY, eyeR * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // eye balls
+    ctx.fillStyle = "#e60020";
+    ctx.beginPath();
+    ctx.arc(cx - eyeDX, eyeY, eyeR, 0, Math.PI * 2);
+    ctx.arc(cx + eyeDX, eyeY, eyeR, 0, Math.PI * 2);
+    ctx.fill();
+    // hot inner
+    ctx.fillStyle = "#ffdd22";
+    ctx.beginPath();
+    ctx.arc(cx - eyeDX, eyeY, eyeR * 0.45, 0, Math.PI * 2);
+    ctx.arc(cx + eyeDX, eyeY, eyeR * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    // black slit pupils (vertical)
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.ellipse(cx - eyeDX, eyeY, eyeR * 0.12, eyeR * 0.55, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx + eyeDX, eyeY, eyeR * 0.12, eyeR * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ---- Fanged screaming mouth ----
+    const mouthY = cy + 110 * scale;
+    const mouthW = 170 * scale;
+    const mouthH = 80 * scale;
+    ctx.fillStyle = "#1a0005";
+    ctx.strokeStyle = "#8b0012";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(cx, mouthY, mouthW, mouthH, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // inner throat glow
+    const tg = ctx.createRadialGradient(cx, mouthY, 5, cx, mouthY, mouthW);
+    tg.addColorStop(0, "rgba(230, 0, 32, 0.7)");
+    tg.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = tg;
+    ctx.beginPath();
+    ctx.ellipse(cx, mouthY, mouthW * 0.9, mouthH * 0.9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // upper fangs
+    ctx.fillStyle = "#fff5e0";
+    ctx.strokeStyle = "#6a0010";
+    ctx.lineWidth = 2;
+    const fangCount = 7;
+    for (let i = 0; i < fangCount; i++) {
+      const fx = cx - mouthW * 0.85 + (i / (fangCount - 1)) * mouthW * 1.7;
+      const fw = 16 * scale;
+      const fh = 42 * scale * (0.7 + Math.random() * 0.3);
+      ctx.beginPath();
+      ctx.moveTo(fx - fw / 2, mouthY - mouthH * 0.6);
+      ctx.lineTo(fx + fw / 2, mouthY - mouthH * 0.6);
+      ctx.lineTo(fx, mouthY - mouthH * 0.6 + fh);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    // lower fangs
+    for (let i = 0; i < fangCount; i++) {
+      const fx = cx - mouthW * 0.75 + (i / (fangCount - 1)) * mouthW * 1.5;
+      const fw = 14 * scale;
+      const fh = 36 * scale * (0.7 + Math.random() * 0.3);
+      ctx.beginPath();
+      ctx.moveTo(fx - fw / 2, mouthY + mouthH * 0.6);
+      ctx.lineTo(fx + fw / 2, mouthY + mouthH * 0.6);
+      ctx.lineTo(fx, mouthY + mouthH * 0.6 - fh);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    // blood drip from mouth
+    ctx.fillStyle = "#8b0012";
+    ctx.beginPath();
+    ctx.moveTo(cx - mouthW * 0.4, mouthY + mouthH * 0.8);
+    ctx.quadraticCurveTo(cx - mouthW * 0.35, mouthY + mouthH * 1.8, cx - mouthW * 0.3, mouthY + mouthH * 2.2);
+    ctx.quadraticCurveTo(cx - mouthW * 0.25, mouthY + mouthH * 1.6, cx - mouthW * 0.25, mouthY + mouthH * 0.85);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + mouthW * 0.2, mouthY + mouthH * 0.85);
+    ctx.quadraticCurveTo(cx + mouthW * 0.25, mouthY + mouthH * 2.4, cx + mouthW * 0.32, mouthY + mouthH * 2.9);
+    ctx.quadraticCurveTo(cx + mouthW * 0.38, mouthY + mouthH * 1.8, cx + mouthW * 0.35, mouthY + mouthH * 0.9);
+    ctx.closePath();
+    ctx.fill();
+
+    // ---- Creepy whiskers ----
+    ctx.strokeStyle = "#3a0008";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    for (let side = -1; side <= 1; side += 2) {
+      for (let i = 0; i < 3; i++) {
+        const wy = cy + 60 * scale + (i - 1) * 22 * scale;
+        ctx.moveTo(cx + side * 80 * scale, wy);
+        ctx.lineTo(cx + side * 260 * scale, wy + (i - 1) * 18 * scale);
+      }
+    }
+    ctx.stroke();
+    ctx.lineCap = "butt";
+
+    // Scary message
+    const msgs = ["BOO!", "DU BIST TOT!", "LAUF!"];
+    const msg = msgs[jumpscare.variant % msgs.length];
+    ctx.save();
+    ctx.translate(cx, H - 70);
+    ctx.rotate((Math.random() - 0.5) * 0.04);
+    ctx.font = `bold ${Math.floor(54 * (0.9 + progress * 0.2))}px "Comic Sans MS", sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#e60020";
+    ctx.shadowColor = "#ff0022";
+    ctx.shadowBlur = 30;
+    ctx.fillText(msg, 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 3;
+    ctx.strokeText(msg, 0, 0);
+    ctx.restore();
+
+    ctx.restore();
+  }
+
   function draw() {
     ctx.clearRect(0, 0, W, H);
     drawBackground();
@@ -1132,6 +1410,9 @@
 
     // Particles on top
     drawParticles();
+
+    // Jumpscare on top of everything
+    if (jumpscare.active) drawJumpscare();
   }
 
   // ---------- Main loop ----------
