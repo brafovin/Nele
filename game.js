@@ -103,7 +103,7 @@
   }
 
   function scheduleNextJumpscare() {
-    jumpscare.nextTime = 6 + Math.random() * 12;
+    jumpscare.nextTime = 4 + Math.random() * 7;
   }
 
   // ---------- Background decoration ----------
@@ -137,6 +137,15 @@
         speed: 0.8 + Math.random() * 1.2,
       });
     }
+    state.bloodRain = [];
+    for (let i = 0; i < 45; i++) {
+      state.bloodRain.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        len: 8 + Math.random() * 14,
+        speed: 320 + Math.random() * 240,
+      });
+    }
   }
   initBackground();
 
@@ -154,6 +163,15 @@
       if (sp.y < -10) {
         sp.y = H * 0.7 + Math.random() * 40;
         sp.x = Math.random() * W;
+      }
+    }
+    if (state.bloodRain) {
+      for (const r of state.bloodRain) {
+        r.y += r.speed * dt;
+        if (r.y > H + 20) {
+          r.y = -20;
+          r.x = Math.random() * W;
+        }
       }
     }
   }
@@ -228,7 +246,7 @@
     jumpscare.active = false;
     jumpscare.timer = 0;
     jumpscare.flash = 0;
-    jumpscare.nextTime = 5 + Math.random() * 8;
+    jumpscare.nextTime = 3 + Math.random() * 5;
     updateHUD();
     hideOverlay();
     state.lastTime = performance.now();
@@ -252,11 +270,11 @@
 
   // ---------- Item spawning ----------
   const ITEM_TYPES = [
-    { kind: "heart",  emoji: "🖤", points: 10, weight: 5, color: "#8b0012", sizeMul: 0.65 },
-    { kind: "star",   emoji: "⭐", points: 20, weight: 3, color: "#ffcc29", sizeMul: 1.0 },
-    { kind: "bow",    emoji: "🎀", points: 15, weight: 3, color: "#5a0010", sizeMul: 0.65 },
-    { kind: "cherry", emoji: "🍒", points: 25, weight: 2, color: "#e63946", sizeMul: 1.0 },
-    { kind: "cloud",  emoji: "⛈",  points: 0,  weight: 3, color: "#1a0a14", sizeMul: 0.65, bad: true },
+    { kind: "skull",  emoji: "💀", points: 10, weight: 5, color: "#e0e0d0", sizeMul: 0.85 },
+    { kind: "eye",    emoji: "👁", points: 20, weight: 3, color: "#ff2030", sizeMul: 0.85 },
+    { kind: "spider", emoji: "🕷", points: 15, weight: 3, color: "#1a0008", sizeMul: 0.9 },
+    { kind: "cherry", emoji: "🩸", points: 25, weight: 2, color: "#8b0012", sizeMul: 1.0 },
+    { kind: "cloud",  emoji: "⛈",  points: 0,  weight: 4, color: "#1a0a14", sizeMul: 0.7, bad: true },
   ];
 
   function pickItemType() {
@@ -271,8 +289,8 @@
 
   function spawnItem() {
     const type = pickItemType();
-    // Keep sensitive items upright, let stars/bows wobble gently
-    const canRotate = type.kind === "star" || type.kind === "bow" || type.kind === "cloud";
+    // Keep sensitive items upright, let spiders/clouds wobble
+    const canRotate = type.kind === "spider" || type.kind === "cloud";
     state.items.push({
       type,
       x: 40 + Math.random() * (W - 80),
@@ -507,6 +525,49 @@
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // Blood rain streaks
+    if (state.bloodRain) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(180, 0, 20, 0.75)";
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      for (const r of state.bloodRain) {
+        ctx.moveTo(r.x, r.y);
+        ctx.lineTo(r.x - 1, r.y + r.len);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Blood dripping from the top of the screen
+    ctx.save();
+    ctx.fillStyle = "#4a0008";
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(W, 0);
+    ctx.lineTo(W, 12);
+    for (let i = W; i >= 0; i -= 40) {
+      const h = 8 + Math.sin(i * 0.05 + state.time * 0.4) * 4 + ((i * 7) % 11);
+      ctx.quadraticCurveTo(i - 10, 16 + h, i - 20, 10);
+    }
+    ctx.lineTo(0, 12);
+    ctx.closePath();
+    ctx.fill();
+    // drips
+    for (let i = 25; i < W; i += 70) {
+      const dripLen = 16 + Math.sin(i * 0.07 + state.time * 0.6) * 8 + ((i * 13) % 18);
+      ctx.beginPath();
+      ctx.moveTo(i - 3, 10);
+      ctx.quadraticCurveTo(i, 10 + dripLen, i + 3, 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(i, 10 + dripLen, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
 
     // Blood-red ground hills
@@ -848,6 +909,35 @@
       ctx.ellipse(-15, eyeY + 1, 1.2, 5.5, 0, 0, Math.PI * 2);
       ctx.ellipse(15, eyeY + 1, 1.2, 5.5, 0, 0, Math.PI * 2);
       ctx.fill();
+
+      // --- Blood tears dripping from the eyes ---
+      const tearL = (Math.sin(state.time * 0.9) * 0.5 + 0.5) * 14 + 6;
+      const tearR = (Math.sin(state.time * 0.7 + 1.3) * 0.5 + 0.5) * 14 + 6;
+      ctx.fillStyle = "#8b0012";
+      ctx.strokeStyle = "#3a0008";
+      ctx.lineWidth = 0.8;
+      // left tear
+      ctx.beginPath();
+      ctx.moveTo(-17, eyeY + 7);
+      ctx.quadraticCurveTo(-20, eyeY + 7 + tearL * 0.5, -17, eyeY + 7 + tearL);
+      ctx.quadraticCurveTo(-14, eyeY + 7 + tearL * 0.5, -17, eyeY + 7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // right tear
+      ctx.beginPath();
+      ctx.moveTo(13, eyeY + 7);
+      ctx.quadraticCurveTo(10, eyeY + 7 + tearR * 0.5, 13, eyeY + 7 + tearR);
+      ctx.quadraticCurveTo(16, eyeY + 7 + tearR * 0.5, 13, eyeY + 7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // hot red shine on tears
+      ctx.fillStyle = "rgba(255, 40, 40, 0.7)";
+      ctx.beginPath();
+      ctx.arc(-18, eyeY + 9, 0.8, 0, Math.PI * 2);
+      ctx.arc(12, eyeY + 9, 0.8, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     // --- Black nose ---
@@ -961,195 +1051,294 @@
     ctx.scale(pulse, pulse);
     const s = it.size * 0.5;
     switch (it.type.kind) {
-      case "heart":  drawHeartItem(s);  break;
-      case "star":   drawStarItem(s);   break;
-      case "bow":    drawBowItem(s);    break;
-      case "cherry": drawCherryItem(s); break;
+      case "skull":  drawSkullItem(s);  break;
+      case "eye":    drawEyeItem(s);    break;
+      case "spider": drawSpiderItem(s); break;
+      case "cherry": drawBloodDropItem(s); break;
       case "cloud":  drawStormItem(s);  break;
     }
     ctx.restore();
   }
 
-  function drawHeartItem(s) {
-    // dark blood glow
-    ctx.save();
-    const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, s * 1.8);
-    glow.addColorStop(0, "rgba(200, 0, 20, 0.55)");
-    glow.addColorStop(1, "rgba(100, 0, 10, 0)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(-s * 2, -s * 2, s * 4, s * 4);
-    ctx.restore();
-    // heart body with dark gradient
-    const g = ctx.createRadialGradient(-s * 0.3, -s * 0.4, 1, 0, 0, s * 1.3);
-    g.addColorStop(0, "#8b0012");
-    g.addColorStop(0.6, "#3a0008");
-    g.addColorStop(1, "#0a0002");
-    ctx.fillStyle = g;
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 2;
-    heartPath(0, 0, s);
-    ctx.fill();
-    ctx.stroke();
-    // red shine
-    ctx.fillStyle = "rgba(255, 50, 30, 0.8)";
-    ctx.beginPath();
-    ctx.ellipse(-s * 0.35, -s * 0.35, s * 0.22, s * 0.35, -0.4, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function heartPath(cx, cy, s) {
-    ctx.beginPath();
-    ctx.moveTo(cx, cy + s * 0.7);
-    ctx.bezierCurveTo(cx + s * 1.3, cy - s * 0.1, cx + s * 0.7, cy - s * 1.2, cx, cy - s * 0.4);
-    ctx.bezierCurveTo(cx - s * 0.7, cy - s * 1.2, cx - s * 1.3, cy - s * 0.1, cx, cy + s * 0.7);
-    ctx.closePath();
-  }
-
-  function drawStarItem(s) {
-    // glow
+  function drawSkullItem(s) {
+    // ghostly greenish glow
     ctx.save();
     const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, s * 2);
-    glow.addColorStop(0, "rgba(255, 240, 150, 0.6)");
-    glow.addColorStop(1, "rgba(255, 240, 150, 0)");
+    glow.addColorStop(0, "rgba(180, 220, 180, 0.35)");
+    glow.addColorStop(1, "rgba(80, 120, 80, 0)");
     ctx.fillStyle = glow;
     ctx.fillRect(-s * 2, -s * 2, s * 4, s * 4);
     ctx.restore();
 
-    // star shape
-    const g = ctx.createRadialGradient(-s * 0.3, -s * 0.3, 1, 0, 0, s * 1.4);
-    g.addColorStop(0, "#fffbe0");
-    g.addColorStop(0.5, "#ffd65e");
-    g.addColorStop(1, "#d48806");
+    // cranium
+    const g = ctx.createRadialGradient(-s * 0.3, -s * 0.4, 1, 0, 0, s * 1.3);
+    g.addColorStop(0, "#f4ece0");
+    g.addColorStop(0.6, "#bfae99");
+    g.addColorStop(1, "#5a4a3a");
     ctx.fillStyle = g;
-    ctx.strokeStyle = "#7a5a00";
+    ctx.strokeStyle = "#2a1a10";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    for (let i = 0; i < 10; i++) {
-      const r = i % 2 === 0 ? s * 1.1 : s * 0.45;
-      const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
-      const px = Math.cos(a) * r;
-      const py = Math.sin(a) * r;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
+    ctx.arc(0, -s * 0.15, s * 0.85, Math.PI, 0);
+    ctx.lineTo(s * 0.7, s * 0.2);
+    ctx.lineTo(s * 0.45, s * 0.35);
+    ctx.lineTo(s * 0.25, s * 0.55);
+    ctx.lineTo(-s * 0.25, s * 0.55);
+    ctx.lineTo(-s * 0.45, s * 0.35);
+    ctx.lineTo(-s * 0.7, s * 0.2);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    // shine
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.beginPath();
-    ctx.ellipse(-s * 0.3, -s * 0.35, s * 0.2, s * 0.35, -0.4, 0, Math.PI * 2);
-    ctx.fill();
-  }
 
-  function drawBowItem(s) {
-    // dark red glow
-    ctx.save();
-    const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, s * 1.9);
-    glow.addColorStop(0, "rgba(150, 0, 15, 0.5)");
-    glow.addColorStop(1, "rgba(100, 0, 10, 0)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(-s * 2, -s * 2, s * 4, s * 4);
-    ctx.restore();
+    // cracks
+    ctx.strokeStyle = "rgba(40, 20, 10, 0.7)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.4, -s * 0.9);
+    ctx.lineTo(-s * 0.25, -s * 0.5);
+    ctx.lineTo(-s * 0.35, -s * 0.2);
+    ctx.moveTo(s * 0.3, -s * 0.85);
+    ctx.lineTo(s * 0.2, -s * 0.4);
+    ctx.stroke();
 
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 2;
-    // back shadow loops
-    ctx.fillStyle = "#0a0206";
+    // black hollow eye sockets
+    ctx.fillStyle = "#000";
     ctx.beginPath();
-    ctx.ellipse(-s * 0.75, s * 0.05, s * 0.85, s * 0.6, -0.3, 0, Math.PI * 2);
+    ctx.ellipse(-s * 0.3, -s * 0.1, s * 0.2, s * 0.25, 0, 0, Math.PI * 2);
+    ctx.ellipse(s * 0.3, -s * 0.1, s * 0.2, s * 0.25, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
+    // glowing red eye points
+    ctx.fillStyle = "#ff3322";
+    ctx.shadowColor = "#ff0022";
+    ctx.shadowBlur = 8;
     ctx.beginPath();
-    ctx.ellipse(s * 0.75, s * 0.05, s * 0.85, s * 0.6, 0.3, 0, Math.PI * 2);
+    ctx.arc(-s * 0.3, -s * 0.08, s * 0.07, 0, Math.PI * 2);
+    ctx.arc(s * 0.3, -s * 0.08, s * 0.07, 0, Math.PI * 2);
     ctx.fill();
-    ctx.stroke();
-    // front loops with dark gradient
-    const g = ctx.createLinearGradient(0, -s * 0.6, 0, s * 0.6);
-    g.addColorStop(0, "#5a0010");
-    g.addColorStop(0.5, "#2a0008");
-    g.addColorStop(1, "#0a0002");
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.ellipse(-s * 0.7, 0, s * 0.8, s * 0.55, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(s * 0.7, 0, s * 0.8, s * 0.55, 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    // blood highlights
-    ctx.fillStyle = "rgba(200,20,30,0.7)";
-    ctx.beginPath();
-    ctx.ellipse(-s * 0.7, -s * 0.25, s * 0.4, s * 0.12, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(s * 0.7, -s * 0.25, s * 0.4, s * 0.12, 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    // knot
-    ctx.fillStyle = "#1a0004";
-    ctx.beginPath();
-    ctx.ellipse(0, 0, s * 0.28, s * 0.38, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  }
+    ctx.shadowBlur = 0;
 
-  function drawCherryItem(s) {
-    // glow
-    ctx.save();
-    const glow = ctx.createRadialGradient(0, s * 0.3, 2, 0, s * 0.3, s * 1.9);
-    glow.addColorStop(0, "rgba(255, 80, 80, 0.5)");
-    glow.addColorStop(1, "rgba(255, 80, 80, 0)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(-s * 2, -s * 2, s * 4, s * 4);
-    ctx.restore();
-
-    // stems
-    ctx.strokeStyle = "#2e7d32";
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = "round";
+    // nose hole
+    ctx.fillStyle = "#000";
     ctx.beginPath();
-    ctx.moveTo(-s * 0.55, s * 0.35);
-    ctx.quadraticCurveTo(-s * 0.2, -s * 0.9, 0, -s * 1.0);
-    ctx.moveTo(s * 0.55, s * 0.35);
-    ctx.quadraticCurveTo(s * 0.2, -s * 0.7, 0, -s * 1.0);
-    ctx.stroke();
-    ctx.lineCap = "butt";
+    ctx.moveTo(0, s * 0.1);
+    ctx.lineTo(-s * 0.08, s * 0.25);
+    ctx.lineTo(s * 0.08, s * 0.25);
+    ctx.closePath();
+    ctx.fill();
 
-    // leaf
-    ctx.fillStyle = "#4caf50";
-    ctx.strokeStyle = "#2e7d32";
+    // teeth
+    ctx.strokeStyle = "#2a1a10";
     ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.ellipse(s * 0.25, -s * 0.95, s * 0.35, s * 0.18, -0.4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    // leaf vein
-    ctx.beginPath();
-    ctx.moveTo(s * 0.0, -s * 0.88);
-    ctx.lineTo(s * 0.5, -s * 1.05);
-    ctx.stroke();
-
-    // cherries
-    for (const [cx] of [[-s * 0.55], [s * 0.55]]) {
-      const cy = s * 0.55;
-      const g = ctx.createRadialGradient(cx - s * 0.2, cy - s * 0.25, 1, cx, cy, s * 0.7);
-      g.addColorStop(0, "#ff8080");
-      g.addColorStop(0.6, "#e63946");
-      g.addColorStop(1, "#8a0e1f");
-      ctx.fillStyle = g;
-      ctx.strokeStyle = "#5a0a14";
-      ctx.lineWidth = 2;
+    ctx.fillStyle = "#f4ece0";
+    for (let i = -2; i <= 2; i++) {
       ctx.beginPath();
-      ctx.arc(cx, cy, s * 0.55, 0, Math.PI * 2);
+      ctx.rect(i * s * 0.14 - s * 0.06, s * 0.35, s * 0.12, s * 0.2);
       ctx.fill();
       ctx.stroke();
-      // shine
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.beginPath();
-      ctx.ellipse(cx - s * 0.2, cy - s * 0.2, s * 0.15, s * 0.22, -0.4, 0, Math.PI * 2);
-      ctx.fill();
     }
+  }
+
+  function drawEyeItem(s) {
+    // blood glow
+    ctx.save();
+    const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, s * 2);
+    glow.addColorStop(0, "rgba(255, 40, 40, 0.55)");
+    glow.addColorStop(1, "rgba(120, 0, 10, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(-s * 2, -s * 2, s * 4, s * 4);
+    ctx.restore();
+
+    // sclera (bloodshot white)
+    const g = ctx.createRadialGradient(-s * 0.2, -s * 0.25, 1, 0, 0, s * 1.1);
+    g.addColorStop(0, "#fff5ee");
+    g.addColorStop(0.7, "#f0d8d8");
+    g.addColorStop(1, "#a07070");
+    ctx.fillStyle = g;
+    ctx.strokeStyle = "#2a0005";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, s * 0.95, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // red veins
+    ctx.strokeStyle = "rgba(200, 20, 20, 0.9)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2;
+      const r1 = s * 0.95;
+      const r2 = s * 0.55;
+      ctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1);
+      ctx.quadraticCurveTo(
+        Math.cos(a + 0.3) * r2 * 0.8,
+        Math.sin(a + 0.3) * r2 * 0.8,
+        Math.cos(a) * r2,
+        Math.sin(a) * r2
+      );
+    }
+    ctx.stroke();
+
+    // iris (sickly yellow-green)
+    const ig = ctx.createRadialGradient(0, 0, 1, 0, 0, s * 0.55);
+    ig.addColorStop(0, "#e6e070");
+    ig.addColorStop(0.5, "#6a7a20");
+    ig.addColorStop(1, "#2a3010");
+    ctx.fillStyle = ig;
+    ctx.beginPath();
+    ctx.arc(0, 0, s * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    // iris rings
+    ctx.strokeStyle = "rgba(0,0,0,0.5)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 0, s * 0.5, 0, Math.PI * 2);
+    ctx.arc(0, 0, s * 0.35, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // huge black pupil
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.arc(0, 0, s * 0.28, 0, Math.PI * 2);
+    ctx.fill();
+    // tiny shine
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.beginPath();
+    ctx.arc(-s * 0.1, -s * 0.1, s * 0.08, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawSpiderItem(s) {
+    // dark aura
+    ctx.save();
+    const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, s * 1.9);
+    glow.addColorStop(0, "rgba(40, 0, 10, 0.6)");
+    glow.addColorStop(1, "rgba(20, 0, 5, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(-s * 2, -s * 2, s * 4, s * 4);
+    ctx.restore();
+
+    // silk thread up (creepy)
+    ctx.strokeStyle = "rgba(220, 220, 220, 0.5)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 1.8);
+    ctx.lineTo(0, -s * 0.6);
+    ctx.stroke();
+
+    // 8 legs
+    ctx.strokeStyle = "#0a0004";
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 3) * 0.8 - 0.4;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(side * s * 0.15, a * s * 0.3);
+        ctx.quadraticCurveTo(
+          side * s * 0.9, (a - 0.4) * s * 0.7 - s * 0.1,
+          side * s * 1.05, (a - 0.1) * s * 0.8 + s * 0.2
+        );
+        ctx.stroke();
+        // leg joint spike
+        ctx.beginPath();
+        ctx.moveTo(side * s * 1.05, (a - 0.1) * s * 0.8 + s * 0.2);
+        ctx.lineTo(side * s * 1.25, (a - 0.1) * s * 0.8 + s * 0.45);
+        ctx.stroke();
+      }
+    }
+    ctx.lineCap = "butt";
+
+    // abdomen (back)
+    const ag = ctx.createRadialGradient(-s * 0.1, s * 0.3, 1, 0, s * 0.35, s * 0.8);
+    ag.addColorStop(0, "#3a0010");
+    ag.addColorStop(0.6, "#1a0008");
+    ag.addColorStop(1, "#000");
+    ctx.fillStyle = ag;
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(0, s * 0.35, s * 0.55, s * 0.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // red hourglass mark
+    ctx.fillStyle = "#e60020";
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.12, s * 0.2);
+    ctx.lineTo(s * 0.12, s * 0.2);
+    ctx.lineTo(-s * 0.1, s * 0.55);
+    ctx.lineTo(s * 0.1, s * 0.55);
+    ctx.closePath();
+    ctx.fill();
+
+    // head
+    const hg = ctx.createRadialGradient(-s * 0.1, -s * 0.25, 1, 0, -s * 0.15, s * 0.5);
+    hg.addColorStop(0, "#1a0008");
+    hg.addColorStop(1, "#000");
+    ctx.fillStyle = hg;
+    ctx.beginPath();
+    ctx.ellipse(0, -s * 0.1, s * 0.38, s * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 4 red glowing eyes
+    ctx.fillStyle = "#ff2030";
+    ctx.shadowColor = "#ff0022";
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(-s * 0.2, -s * 0.22, s * 0.06, 0, Math.PI * 2);
+    ctx.arc(-s * 0.07, -s * 0.28, s * 0.05, 0, Math.PI * 2);
+    ctx.arc(s * 0.07, -s * 0.28, s * 0.05, 0, Math.PI * 2);
+    ctx.arc(s * 0.2, -s * 0.22, s * 0.06, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // fangs
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.08, s * 0.05);
+    ctx.lineTo(-s * 0.1, s * 0.2);
+    ctx.moveTo(s * 0.08, s * 0.05);
+    ctx.lineTo(s * 0.1, s * 0.2);
+    ctx.stroke();
+  }
+
+  function drawBloodDropItem(s) {
+    // red glow
+    ctx.save();
+    const glow = ctx.createRadialGradient(0, s * 0.1, 2, 0, s * 0.1, s * 1.9);
+    glow.addColorStop(0, "rgba(255, 30, 30, 0.55)");
+    glow.addColorStop(1, "rgba(139, 0, 18, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(-s * 2, -s * 2, s * 4, s * 4);
+    ctx.restore();
+
+    // tear/drop shape
+    const g = ctx.createRadialGradient(-s * 0.2, s * 0.1, 1, 0, s * 0.1, s * 1.1);
+    g.addColorStop(0, "#ff4040");
+    g.addColorStop(0.5, "#b00018");
+    g.addColorStop(1, "#3a0008");
+    ctx.fillStyle = g;
+    ctx.strokeStyle = "#1a0004";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 1.0);
+    ctx.bezierCurveTo(s * 0.8, -s * 0.1, s * 0.85, s * 0.6, 0, s * 0.95);
+    ctx.bezierCurveTo(-s * 0.85, s * 0.6, -s * 0.8, -s * 0.1, 0, -s * 1.0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // bright shine
+    ctx.fillStyle = "rgba(255, 220, 220, 0.85)";
+    ctx.beginPath();
+    ctx.ellipse(-s * 0.25, -s * 0.1, s * 0.13, s * 0.32, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // small trailing droplet
+    ctx.fillStyle = "#8b0012";
+    ctx.beginPath();
+    ctx.arc(s * 0.3, s * 0.85, s * 0.15, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   function drawStormItem(s) {
@@ -1410,6 +1599,17 @@
 
     // Particles on top
     drawParticles();
+
+    // Creepy pulsing vignette
+    ctx.save();
+    const pulse = 0.55 + 0.15 * Math.sin(state.time * 2.3);
+    const vign = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.85);
+    vign.addColorStop(0, "rgba(0,0,0,0)");
+    vign.addColorStop(0.6, `rgba(20, 0, 5, ${pulse * 0.55})`);
+    vign.addColorStop(1, `rgba(0, 0, 0, ${pulse})`);
+    ctx.fillStyle = vign;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
 
     // Jumpscare on top of everything
     if (jumpscare.active) drawJumpscare();
