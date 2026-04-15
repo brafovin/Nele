@@ -595,10 +595,14 @@
     ctx.fill();
     ctx.restore();
 
-    // --- Cute little shoes peeking out ---
+    // --- Silver star-heels peeking out ---
     ctx.save();
-    ctx.fillStyle = "#ff3d79";
-    ctx.strokeStyle = "#7a1f4a";
+    const shoeGrad = ctx.createLinearGradient(0, h * 0.52, 0, h * 0.58);
+    shoeGrad.addColorStop(0, "#f0f4ff");
+    shoeGrad.addColorStop(0.5, "#a0a8d0");
+    shoeGrad.addColorStop(1, "#4a4e70");
+    ctx.fillStyle = shoeGrad;
+    ctx.strokeStyle = "#2a2d45";
     ctx.lineWidth = 1.5;
     // left shoe
     ctx.beginPath();
@@ -610,19 +614,20 @@
     ctx.ellipse(w * 0.15, h * 0.55, 9, 5, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    // little bows on shoes
-    ctx.fillStyle = "#fff";
-    drawHeartShape(-w * 0.15, h * 0.53, 2.5);
-    drawHeartShape(w * 0.15, h * 0.53, 2.5);
+    // golden stars on shoes
+    ctx.fillStyle = "#ffd65e";
+    drawSparkle(-w * 0.15, h * 0.53, 2);
+    drawSparkle(w * 0.15, h * 0.53, 2);
     ctx.restore();
 
-    // --- Dress (multi-layer skirt, slim silhouette) ---
-    // Back/darker layer
+    // --- Galaxy gown (deep blue → purple → pink gradient, slim) ---
+    // Back darker layer
     const dressBack = ctx.createLinearGradient(0, h * 0.0, 0, h * 0.58);
-    dressBack.addColorStop(0, "#d63384");
-    dressBack.addColorStop(1, "#7a1f4a");
+    dressBack.addColorStop(0, "#1a0f3d");
+    dressBack.addColorStop(0.5, "#4a1f6a");
+    dressBack.addColorStop(1, "#2a1b4e");
     ctx.fillStyle = dressBack;
-    ctx.strokeStyle = "#7a1f4a";
+    ctx.strokeStyle = "#0d0726";
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(-w * 0.30, h * 0.06);
@@ -633,10 +638,12 @@
     ctx.fill();
     ctx.stroke();
 
-    // Front pink layer
+    // Front layer: galaxy gradient
     const dressFront = ctx.createLinearGradient(0, h * 0.0, 0, h * 0.5);
-    dressFront.addColorStop(0, "#ffb6d5");
-    dressFront.addColorStop(1, "#ff7ab0");
+    dressFront.addColorStop(0, "#2a1b4e");
+    dressFront.addColorStop(0.45, "#6b2a9a");
+    dressFront.addColorStop(0.8, "#b84a84");
+    dressFront.addColorStop(1, "#ff6fae");
     ctx.fillStyle = dressFront;
     ctx.beginPath();
     ctx.moveTo(-w * 0.27, h * 0.08);
@@ -647,53 +654,117 @@
     ctx.fill();
     ctx.stroke();
 
-    // Lace frill (scalloped) at top layer bottom
-    ctx.fillStyle = "#fff";
-    ctx.beginPath();
-    for (let i = 0; i <= 10; i++) {
-      const px = -w * 0.36 + (i / 10) * w * 0.72;
-      ctx.arc(px, h * 0.48, 3.5, 0, Math.PI, false);
+    // Galaxy nebula swirls (soft light blobs)
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    const neb1 = ctx.createRadialGradient(-w * 0.1, h * 0.25, 1, -w * 0.1, h * 0.25, 14);
+    neb1.addColorStop(0, "#ff8fc0");
+    neb1.addColorStop(1, "rgba(255,143,192,0)");
+    ctx.fillStyle = neb1;
+    ctx.fillRect(-w * 0.3, h * 0.1, w * 0.4, h * 0.4);
+    const neb2 = ctx.createRadialGradient(w * 0.12, h * 0.35, 1, w * 0.12, h * 0.35, 14);
+    neb2.addColorStop(0, "#4db8ff");
+    neb2.addColorStop(1, "rgba(77,184,255,0)");
+    ctx.fillStyle = neb2;
+    ctx.fillRect(-w * 0.2, h * 0.2, w * 0.4, h * 0.4);
+    ctx.restore();
+
+    // Scattered golden stars on the dress
+    ctx.fillStyle = "#ffd65e";
+    const dressStars = [
+      [-w * 0.15, h * 0.18, 1.6],
+      [w * 0.08, h * 0.22, 2.2],
+      [-w * 0.05, h * 0.30, 1.4],
+      [w * 0.18, h * 0.32, 1.8],
+      [-w * 0.20, h * 0.36, 2.0],
+      [w * 0.02, h * 0.40, 1.6],
+      [-w * 0.10, h * 0.44, 1.3],
+      [w * 0.15, h * 0.45, 1.5],
+    ];
+    for (const [sx, sy, sr] of dressStars) {
+      const twk = 0.7 + 0.3 * Math.sin(state.time * 4 + sx);
+      ctx.globalAlpha = twk;
+      drawSparkle(sx, sy, sr);
     }
-    ctx.lineTo(w * 0.36, h * 0.52);
-    ctx.lineTo(-w * 0.36, h * 0.52);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "#d63384";
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    ctx.globalAlpha = 1;
 
-    // Waist ribbon with big bow
-    ctx.fillStyle = "#ff3d79";
-    ctx.strokeStyle = "#7a1f4a";
-    ctx.lineWidth = 1.5;
-    ctx.fillRect(-w * 0.28, h * 0.08, w * 0.56, 6);
-    ctx.strokeRect(-w * 0.28, h * 0.08, w * 0.56, 6);
-    // waist bow (center)
+    // Silver shooting-star trim at hem
+    ctx.save();
+    ctx.strokeStyle = "#e0e7ff";
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.ellipse(-10, h * 0.11, 10, 7, -0.25, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(-w * 0.36, h * 0.48);
+    for (let i = 0; i <= 16; i++) {
+      const px = -w * 0.36 + (i / 16) * w * 0.72;
+      const py = h * 0.48 + Math.sin(i * 0.9) * 3;
+      ctx.lineTo(px, py);
+    }
     ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(10, h * 0.11, 10, 7, 0.25, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(0, h * 0.11, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Heart buttons on bodice
+    // little stars along trim
     ctx.fillStyle = "#fff";
-    drawHeartShape(0, h * 0.22, 4);
-    drawHeartShape(0, h * 0.32, 4);
-    drawHeartShape(0, h * 0.42, 4);
+    for (let i = 0; i < 7; i++) {
+      const px = -w * 0.32 + i * (w * 0.64 / 6);
+      drawSparkle(px, h * 0.5, 1.3);
+    }
+    ctx.restore();
 
-    // Glittering sparkles on dress
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    for (let i = 0; i < 6; i++) {
-      const sx = (i - 2.5) * 11 + Math.sin(state.time * 3 + i) * 1.5;
-      const sy = h * 0.17 + (i % 2) * 14;
-      drawSparkle(sx, sy, 1.3);
+    // --- Silver belt with moon buckle ---
+    const beltGrad = ctx.createLinearGradient(0, h * 0.07, 0, h * 0.13);
+    beltGrad.addColorStop(0, "#e0e7ff");
+    beltGrad.addColorStop(0.5, "#a0a8d0");
+    beltGrad.addColorStop(1, "#4a4e70");
+    ctx.fillStyle = beltGrad;
+    ctx.strokeStyle = "#2a2d45";
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(-w * 0.28, h * 0.08, w * 0.56, 7);
+    ctx.strokeRect(-w * 0.28, h * 0.08, w * 0.56, 7);
+
+    // Crescent moon buckle
+    ctx.save();
+    ctx.translate(0, h * 0.115);
+    ctx.fillStyle = "#fff8dc";
+    ctx.strokeStyle = "#b8860b";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // crescent shadow
+    ctx.fillStyle = "#4a1f6a";
+    ctx.beginPath();
+    ctx.arc(3, -1, 7, 0, Math.PI * 2);
+    ctx.fill();
+    // small star next to moon
+    ctx.fillStyle = "#ffd65e";
+    drawSparkle(-10, -4, 1.5);
+    drawSparkle(9, 4, 1.2);
+    ctx.restore();
+
+    // --- Puffy shoulder sleeves ---
+    ctx.fillStyle = "#4a1f6a";
+    ctx.strokeStyle = "#0d0726";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(-w * 0.28, h * 0.08, 9, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(w * 0.28, h * 0.08, 9, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // sleeve highlights
+    ctx.fillStyle = "rgba(255, 200, 230, 0.5)";
+    ctx.beginPath();
+    ctx.ellipse(-w * 0.29, h * 0.065, 5, 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(w * 0.29, h * 0.065, 5, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Glittering sparkles floating around dress
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    for (let i = 0; i < 5; i++) {
+      const sx = (i - 2) * 14 + Math.sin(state.time * 3 + i) * 2;
+      const sy = h * 0.15 + Math.cos(state.time * 2 + i) * 2;
+      drawSparkle(sx, sy, 1.1);
     }
 
     // --- Arms (white with pink paws, slimmer) ---
