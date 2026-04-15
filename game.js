@@ -18,10 +18,13 @@
     lives: 3,
     level: 1,
     spawnTimer: 0,
-    spawnInterval: 850, // ms
+    spawnInterval: 650, // ms
     items: [],
     particles: [],
     clouds: [],
+    stars: [],
+    sparkles: [],
+    time: 0,
     lastTime: 0,
   };
 
@@ -30,7 +33,7 @@
     y: H - 90,
     w: 110,
     h: 110,
-    speed: 360, // px/sec (keyboard)
+    speed: 440, // px/sec (keyboard)
     targetX: W / 2,
     facing: 1,
     blinkTimer: 0,
@@ -39,19 +42,57 @@
 
   const input = { left: false, right: false, mouseX: null };
 
-  // ---------- Background clouds ----------
-  function initClouds() {
+  // ---------- Background decoration ----------
+  function initBackground() {
     state.clouds = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 4; i++) {
       state.clouds.push({
         x: Math.random() * W,
-        y: 40 + Math.random() * 180,
-        r: 28 + Math.random() * 22,
-        speed: 8 + Math.random() * 12,
+        y: 60 + Math.random() * 180,
+        r: 26 + Math.random() * 18,
+        speed: 6 + Math.random() * 10,
+      });
+    }
+    state.stars = [];
+    for (let i = 0; i < 60; i++) {
+      state.stars.push({
+        x: Math.random() * W,
+        y: Math.random() * (H * 0.55),
+        r: 0.6 + Math.random() * 1.8,
+        twinkle: Math.random() * Math.PI * 2,
+        twinkleSpeed: 1 + Math.random() * 2,
+      });
+    }
+    state.sparkles = [];
+    for (let i = 0; i < 20; i++) {
+      state.sparkles.push({
+        x: Math.random() * W,
+        y: Math.random() * H * 0.7,
+        r: 1.5 + Math.random() * 2.5,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.8 + Math.random() * 1.2,
       });
     }
   }
-  initClouds();
+  initBackground();
+
+  function updateBackground(dt) {
+    for (const c of state.clouds) {
+      c.x += c.speed * dt;
+      if (c.x - c.r > W) c.x = -c.r;
+    }
+    for (const s of state.stars) {
+      s.twinkle += s.twinkleSpeed * dt;
+    }
+    for (const sp of state.sparkles) {
+      sp.phase += sp.speed * dt;
+      sp.y -= 6 * dt;
+      if (sp.y < -10) {
+        sp.y = H * 0.7 + Math.random() * 40;
+        sp.x = Math.random() * W;
+      }
+    }
+  }
 
   // ---------- Input ----------
   window.addEventListener("keydown", (e) => {
@@ -116,7 +157,7 @@
     state.level = 1;
     state.items = [];
     state.particles = [];
-    state.spawnInterval = 850;
+    state.spawnInterval = 650;
     state.spawnTimer = 0;
     kitty.x = W / 2;
     kitty.targetX = W / 2;
@@ -167,9 +208,9 @@
       x: 40 + Math.random() * (W - 80),
       y: -40,
       size: 44,
-      vy: 120 + Math.random() * 60 + state.level * 20,
+      vy: 260 + Math.random() * 120 + state.level * 40,
       rot: Math.random() * Math.PI * 2,
-      vr: (Math.random() - 0.5) * 2,
+      vr: (Math.random() - 0.5) * 3,
     });
   }
 
@@ -212,11 +253,8 @@
       kitty.blinkTimer = kitty.isBlinking ? 0.12 : 2 + Math.random() * 2;
     }
 
-    // Background clouds
-    for (const c of state.clouds) {
-      c.x += c.speed * dt;
-      if (c.x - c.r > W) c.x = -c.r;
-    }
+    // Background decoration
+    updateBackground(dt);
 
     // Spawn
     state.spawnTimer += dt * 1000;
@@ -258,7 +296,7 @@
           const newLevel = 1 + Math.floor(state.score / 150);
           if (newLevel !== state.level) {
             state.level = newLevel;
-            state.spawnInterval = Math.max(320, 850 - (state.level - 1) * 55);
+            state.spawnInterval = Math.max(220, 650 - (state.level - 1) * 55);
             updateHUD();
           }
         }
@@ -291,27 +329,74 @@
 
   // ---------- Drawing ----------
   function drawBackground() {
-    // Sky gradient is on canvas background; add sun + hills
-    // Sun
+    // Magical twilight sky gradient
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#2a1b4e");
+    sky.addColorStop(0.25, "#5a2a7a");
+    sky.addColorStop(0.5, "#c24a9a");
+    sky.addColorStop(0.75, "#ff8fc0");
+    sky.addColorStop(1, "#ffd1e8");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // Twinkling stars
     ctx.save();
-    ctx.globalAlpha = 0.9;
-    const sunX = W - 90;
-    const sunY = 90;
-    const grad = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 70);
-    grad.addColorStop(0, "#fff7c2");
-    grad.addColorStop(1, "rgba(255,247,194,0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(sunX - 70, sunY - 70, 140, 140);
-    ctx.fillStyle = "#ffe17a";
+    ctx.fillStyle = "#fff";
+    for (const s of state.stars) {
+      const a = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(s.twinkle));
+      ctx.globalAlpha = a;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // Big glowing moon with crater
+    ctx.save();
+    const moonX = 90;
+    const moonY = 95;
+    const glow = ctx.createRadialGradient(moonX, moonY, 20, moonX, moonY, 90);
+    glow.addColorStop(0, "rgba(255,248,220,0.55)");
+    glow.addColorStop(1, "rgba(255,248,220,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(moonX - 90, moonY - 90, 180, 180);
+    ctx.fillStyle = "#fff8dc";
     ctx.beginPath();
-    ctx.arc(sunX, sunY, 34, 0, Math.PI * 2);
+    ctx.arc(moonX, moonY, 38, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(210,190,140,0.4)";
+    ctx.beginPath();
+    ctx.arc(moonX - 10, moonY - 8, 6, 0, Math.PI * 2);
+    ctx.arc(moonX + 12, moonY + 6, 4, 0, Math.PI * 2);
+    ctx.arc(moonX + 4, moonY - 14, 3, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // Background clouds
+    // Rainbow arch
     ctx.save();
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    const rbX = W * 0.5;
+    const rbY = H * 0.72;
+    const rbR = 280;
+    const colors = ["#ff4d6d", "#ff9a3c", "#ffe14d", "#5ed35e", "#4db8ff", "#9b5de5"];
+    ctx.lineWidth = 10;
+    ctx.globalAlpha = 0.55;
+    for (let i = 0; i < colors.length; i++) {
+      ctx.strokeStyle = colors[i];
+      ctx.beginPath();
+      ctx.arc(rbX, rbY, rbR - i * 10, Math.PI, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // Soft candy clouds
+    ctx.save();
     for (const c of state.clouds) {
+      const g = ctx.createRadialGradient(c.x, c.y, 2, c.x, c.y, c.r * 1.8);
+      g.addColorStop(0, "rgba(255,255,255,0.95)");
+      g.addColorStop(1, "rgba(255,200,230,0.1)");
+      ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
       ctx.arc(c.x + c.r * 0.8, c.y + 6, c.r * 0.8, 0, Math.PI * 2);
@@ -321,25 +406,102 @@
     }
     ctx.restore();
 
-    // Ground hills
+    // Fairytale castle silhouette
+    drawCastle(W * 0.78, H * 0.68);
+
+    // Sparkles
     ctx.save();
-    ctx.fillStyle = "#8bd98b";
+    ctx.fillStyle = "#fff";
+    for (const sp of state.sparkles) {
+      const a = 0.5 + 0.5 * Math.sin(sp.phase);
+      ctx.globalAlpha = a;
+      drawSparkle(sp.x, sp.y, sp.r);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // Candy ground (two layers of hills)
+    ctx.save();
+    const hill2 = ctx.createLinearGradient(0, H - 120, 0, H);
+    hill2.addColorStop(0, "#ff8fc0");
+    hill2.addColorStop(1, "#d63384");
+    ctx.fillStyle = hill2;
     ctx.beginPath();
-    ctx.moveTo(0, H - 40);
-    ctx.quadraticCurveTo(W * 0.25, H - 110, W * 0.5, H - 50);
-    ctx.quadraticCurveTo(W * 0.75, H - 10, W, H - 70);
+    ctx.moveTo(0, H - 60);
+    ctx.quadraticCurveTo(W * 0.2, H - 130, W * 0.45, H - 70);
+    ctx.quadraticCurveTo(W * 0.7, H - 20, W, H - 80);
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fill();
+
+    const hill1 = ctx.createLinearGradient(0, H - 60, 0, H);
+    hill1.addColorStop(0, "#ffd1e8");
+    hill1.addColorStop(1, "#ff8fc0");
+    ctx.fillStyle = hill1;
+    ctx.beginPath();
+    ctx.moveTo(0, H - 30);
+    ctx.quadraticCurveTo(W * 0.3, H - 80, W * 0.55, H - 40);
+    ctx.quadraticCurveTo(W * 0.82, H - 5, W, H - 50);
     ctx.lineTo(W, H);
     ctx.lineTo(0, H);
     ctx.closePath();
     ctx.fill();
 
     // Flowers on ground
-    for (let i = 0; i < 8; i++) {
-      const fx = ((i * 83 + 20) % W);
-      const fy = H - 22 + Math.sin(i) * 6;
-      drawFlower(fx, fy, 6, i % 2 ? "#ff8fc0" : "#fff176");
+    for (let i = 0; i < 10; i++) {
+      const fx = ((i * 71 + 25) % W);
+      const fy = H - 18 + Math.sin(i * 1.3) * 4;
+      drawFlower(fx, fy, 6, i % 3 === 0 ? "#fff176" : i % 2 ? "#ff3d79" : "#9b5de5");
     }
     ctx.restore();
+  }
+
+  function drawCastle(x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = "rgba(60,30,80,0.75)";
+    // main keep
+    ctx.fillRect(-40, -80, 80, 110);
+    // side towers
+    ctx.fillRect(-70, -60, 25, 90);
+    ctx.fillRect(45, -60, 25, 90);
+    // roofs
+    ctx.fillStyle = "rgba(120,50,130,0.85)";
+    ctx.beginPath();
+    ctx.moveTo(-42, -80); ctx.lineTo(0, -120); ctx.lineTo(42, -80); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-72, -60); ctx.lineTo(-57, -90); ctx.lineTo(-43, -60); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(43, -60); ctx.lineTo(58, -90); ctx.lineTo(73, -60); ctx.closePath(); ctx.fill();
+    // windows (lit)
+    ctx.fillStyle = "#ffe17a";
+    ctx.fillRect(-6, -55, 12, 16);
+    ctx.fillRect(-55, -40, 6, 10);
+    ctx.fillRect(49, -40, 6, 10);
+    // flag
+    ctx.strokeStyle = "rgba(60,30,80,0.75)";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, -120); ctx.lineTo(0, -140); ctx.stroke();
+    ctx.fillStyle = "#ff3d79";
+    ctx.beginPath();
+    ctx.moveTo(0, -140); ctx.lineTo(14, -135); ctx.lineTo(0, -130); ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawSparkle(x, y, r) {
+    ctx.beginPath();
+    ctx.moveTo(x, y - r * 2);
+    ctx.lineTo(x + r * 0.4, y - r * 0.4);
+    ctx.lineTo(x + r * 2, y);
+    ctx.lineTo(x + r * 0.4, y + r * 0.4);
+    ctx.lineTo(x, y + r * 2);
+    ctx.lineTo(x - r * 0.4, y + r * 0.4);
+    ctx.lineTo(x - r * 2, y);
+    ctx.lineTo(x - r * 0.4, y - r * 0.4);
+    ctx.closePath();
+    ctx.fill();
   }
 
   function drawFlower(x, y, r, color) {
@@ -363,132 +525,243 @@
     ctx.save();
     ctx.translate(x, y);
 
-    // Body (sitting, pink dress)
-    ctx.fillStyle = "#ff7ab0";
-    roundRect(-w * 0.38, h * 0.05, w * 0.76, h * 0.45, 20);
+    // Soft bounce while moving
+    const bounce = Math.sin(state.time * 6) * 1.2;
+    ctx.translate(0, bounce);
+
+    // Ground shadow
+    ctx.save();
+    ctx.fillStyle = "rgba(60, 20, 60, 0.25)";
+    ctx.beginPath();
+    ctx.ellipse(0, h * 0.56, w * 0.42, 7, 0, 0, Math.PI * 2);
     ctx.fill();
-    // Dress collar dots
+    ctx.restore();
+
+    // --- Dress (skirt) with gradient ---
+    const dressGrad = ctx.createLinearGradient(0, h * 0.0, 0, h * 0.55);
+    dressGrad.addColorStop(0, "#ff9ec8");
+    dressGrad.addColorStop(1, "#d63384");
+    ctx.fillStyle = dressGrad;
+    ctx.strokeStyle = "#7a1f4a";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.36, h * 0.08);
+    ctx.quadraticCurveTo(-w * 0.5, h * 0.55, -w * 0.45, h * 0.55);
+    ctx.lineTo(w * 0.45, h * 0.55);
+    ctx.quadraticCurveTo(w * 0.5, h * 0.55, w * 0.36, h * 0.08);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Skirt frill wavy bottom
     ctx.fillStyle = "#fff";
-    for (let i = -2; i <= 2; i++) {
-      ctx.beginPath();
-      ctx.arc(i * 12, h * 0.1, 3, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.47, h * 0.52);
+    for (let i = 0; i <= 10; i++) {
+      const px = -w * 0.47 + (i / 10) * w * 0.94;
+      const py = h * 0.52 + (i % 2 === 0 ? -3 : 4);
+      ctx.lineTo(px, py);
+    }
+    ctx.lineTo(w * 0.47, h * 0.56);
+    ctx.lineTo(-w * 0.47, h * 0.56);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#d63384";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Heart buttons on dress
+    ctx.fillStyle = "#fff";
+    drawHeartShape(0, h * 0.2, 5);
+    drawHeartShape(0, h * 0.34, 5);
+
+    // Sparkles on dress
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    for (let i = 0; i < 5; i++) {
+      const sx = (i - 2) * 12 + Math.sin(state.time * 3 + i) * 1.5;
+      const sy = h * 0.15 + (i % 2) * 18;
+      drawSparkle(sx, sy, 1.2);
     }
 
-    // Arms
-    ctx.fillStyle = "#fff";
+    // --- Arms (white with pink paws) ---
     ctx.strokeStyle = "#333";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     // left arm
-    ctx.beginPath();
-    ctx.ellipse(-w * 0.42, h * 0.18, 10, 16, -0.4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    // right arm
-    ctx.beginPath();
-    ctx.ellipse(w * 0.42, h * 0.18, 10, 16, 0.4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Head
     ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.ellipse(-w * 0.43, h * 0.18, 11, 18, -0.45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // left paw pink pad
+    ctx.fillStyle = "#ffb6d5";
+    ctx.beginPath();
+    ctx.arc(-w * 0.46, h * 0.3, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // right arm
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.ellipse(w * 0.43, h * 0.18, 11, 18, 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#ffb6d5";
+    ctx.beginPath();
+    ctx.arc(w * 0.46, h * 0.3, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- Head with subtle gradient ---
+    const headGrad = ctx.createRadialGradient(-8, -h * 0.24, 5, 0, -h * 0.18, w * 0.45);
+    headGrad.addColorStop(0, "#ffffff");
+    headGrad.addColorStop(1, "#f2e7ec");
+    ctx.fillStyle = headGrad;
     ctx.strokeStyle = "#333";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.ellipse(0, -h * 0.18, w * 0.42, h * 0.36, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -h * 0.18, w * 0.44, h * 0.38, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    // Ears
+    // --- Ears ---
+    ctx.fillStyle = "#fff";
+    // left ear
     ctx.beginPath();
-    ctx.moveTo(-w * 0.38, -h * 0.35);
-    ctx.lineTo(-w * 0.18, -h * 0.58);
-    ctx.lineTo(-w * 0.12, -h * 0.35);
+    ctx.moveTo(-w * 0.40, -h * 0.34);
+    ctx.quadraticCurveTo(-w * 0.30, -h * 0.62, -w * 0.10, -h * 0.36);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // right ear
+    ctx.beginPath();
+    ctx.moveTo(w * 0.40, -h * 0.34);
+    ctx.quadraticCurveTo(w * 0.30, -h * 0.62, w * 0.10, -h * 0.36);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    ctx.beginPath();
-    ctx.moveTo(w * 0.38, -h * 0.35);
-    ctx.lineTo(w * 0.18, -h * 0.58);
-    ctx.lineTo(w * 0.12, -h * 0.35);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Ear inner (pink)
+    // Ear inner pink
     ctx.fillStyle = "#ffb6d5";
     ctx.beginPath();
-    ctx.moveTo(-w * 0.32, -h * 0.38);
-    ctx.lineTo(-w * 0.2, -h * 0.52);
-    ctx.lineTo(-w * 0.16, -h * 0.38);
+    ctx.moveTo(-w * 0.33, -h * 0.38);
+    ctx.quadraticCurveTo(-w * 0.27, -h * 0.55, -w * 0.15, -h * 0.38);
     ctx.closePath();
     ctx.fill();
 
-    // Bow on right ear
-    const bowX = w * 0.22;
-    const bowY = -h * 0.45;
+    // --- Bow on left ear (big and fancy) ---
+    const bowX = -w * 0.25;
+    const bowY = -h * 0.48;
+    // ribbon back
     ctx.fillStyle = "#ff3d79";
+    ctx.strokeStyle = "#7a1f4a";
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.ellipse(bowX - 10, bowY, 10, 7, -0.3, 0, Math.PI * 2);
+    ctx.ellipse(bowX - 13, bowY, 14, 10, -0.35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(bowX + 13, bowY, 14, 10, 0.35, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // bow highlight
+    ctx.fillStyle = "#ff7aa8";
+    ctx.beginPath();
+    ctx.ellipse(bowX - 13, bowY - 3, 9, 4, -0.35, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(bowX + 10, bowY, 10, 7, 0.3, 0, Math.PI * 2);
+    ctx.ellipse(bowX + 13, bowY - 3, 9, 4, 0.35, 0, Math.PI * 2);
     ctx.fill();
+    // knot
+    ctx.fillStyle = "#ff3d79";
+    ctx.strokeStyle = "#7a1f4a";
     ctx.beginPath();
-    ctx.arc(bowX, bowY, 5, 0, Math.PI * 2);
+    ctx.arc(bowX, bowY, 6, 0, Math.PI * 2);
     ctx.fill();
-    // Bow dots
+    ctx.stroke();
+    // white dots on bow
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.arc(bowX - 10, bowY, 2, 0, Math.PI * 2);
-    ctx.arc(bowX + 10, bowY, 2, 0, Math.PI * 2);
+    ctx.arc(bowX - 13, bowY + 1, 1.8, 0, Math.PI * 2);
+    ctx.arc(bowX - 8, bowY - 3, 1.6, 0, Math.PI * 2);
+    ctx.arc(bowX + 13, bowY + 1, 1.8, 0, Math.PI * 2);
+    ctx.arc(bowX + 8, bowY - 3, 1.6, 0, Math.PI * 2);
     ctx.fill();
 
-    // Eyes
-    ctx.fillStyle = "#222";
+    // --- Blush cheeks ---
+    ctx.fillStyle = "rgba(255, 150, 190, 0.75)";
+    ctx.beginPath();
+    ctx.ellipse(-w * 0.27, -h * 0.12, 6, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(w * 0.27, -h * 0.12, 6, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // --- Eyes (bigger, sparkly) ---
     if (kitty.isBlinking) {
       ctx.strokeStyle = "#222";
       ctx.lineWidth = 3;
+      ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(-18, -h * 0.2);
-      ctx.lineTo(-8, -h * 0.2);
-      ctx.moveTo(8, -h * 0.2);
-      ctx.lineTo(18, -h * 0.2);
+      ctx.moveTo(-19, -h * 0.2);
+      ctx.quadraticCurveTo(-13, -h * 0.17, -7, -h * 0.2);
+      ctx.moveTo(7, -h * 0.2);
+      ctx.quadraticCurveTo(13, -h * 0.17, 19, -h * 0.2);
       ctx.stroke();
+      ctx.lineCap = "butt";
     } else {
+      // eye base
+      ctx.fillStyle = "#222";
       ctx.beginPath();
-      ctx.ellipse(-13, -h * 0.2, 4, 6, 0, 0, Math.PI * 2);
-      ctx.ellipse(13, -h * 0.2, 4, 6, 0, 0, Math.PI * 2);
+      ctx.ellipse(-13, -h * 0.2, 5, 7.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(13, -h * 0.2, 5, 7.5, 0, 0, Math.PI * 2);
       ctx.fill();
-      // eye shine
+      // big shine
       ctx.fillStyle = "#fff";
       ctx.beginPath();
-      ctx.arc(-12, -h * 0.22, 1.3, 0, Math.PI * 2);
-      ctx.arc(14, -h * 0.22, 1.3, 0, Math.PI * 2);
+      ctx.arc(-11.5, -h * 0.22, 2, 0, Math.PI * 2);
+      ctx.arc(14.5, -h * 0.22, 2, 0, Math.PI * 2);
+      ctx.fill();
+      // small shine
+      ctx.beginPath();
+      ctx.arc(-14.5, -h * 0.18, 0.9, 0, Math.PI * 2);
+      ctx.arc(11.5, -h * 0.18, 0.9, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Nose (yellow)
+    // --- Nose (yellow with shine) ---
     ctx.fillStyle = "#ffcc29";
     ctx.beginPath();
-    ctx.ellipse(0, -h * 0.13, 5, 3.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -h * 0.13, 5.5, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff7c2";
+    ctx.beginPath();
+    ctx.arc(-1.5, -h * 0.14, 1.2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Whiskers
-    ctx.strokeStyle = "#444";
-    ctx.lineWidth = 2;
+    // --- Whiskers ---
+    ctx.strokeStyle = "#555";
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = "round";
     ctx.beginPath();
     // left
-    ctx.moveTo(-14, -h * 0.1); ctx.lineTo(-34, -h * 0.14);
-    ctx.moveTo(-14, -h * 0.08); ctx.lineTo(-34, -h * 0.07);
-    ctx.moveTo(-14, -h * 0.06); ctx.lineTo(-34, 0);
+    ctx.moveTo(-14, -h * 0.1); ctx.quadraticCurveTo(-25, -h * 0.13, -36, -h * 0.14);
+    ctx.moveTo(-14, -h * 0.07); ctx.quadraticCurveTo(-25, -h * 0.06, -36, -h * 0.05);
+    ctx.moveTo(-14, -h * 0.04); ctx.quadraticCurveTo(-25, 0, -36, h * 0.02);
     // right
-    ctx.moveTo(14, -h * 0.1); ctx.lineTo(34, -h * 0.14);
-    ctx.moveTo(14, -h * 0.08); ctx.lineTo(34, -h * 0.07);
-    ctx.moveTo(14, -h * 0.06); ctx.lineTo(34, 0);
+    ctx.moveTo(14, -h * 0.1); ctx.quadraticCurveTo(25, -h * 0.13, 36, -h * 0.14);
+    ctx.moveTo(14, -h * 0.07); ctx.quadraticCurveTo(25, -h * 0.06, 36, -h * 0.05);
+    ctx.moveTo(14, -h * 0.04); ctx.quadraticCurveTo(25, 0, 36, h * 0.02);
     ctx.stroke();
+    ctx.lineCap = "butt";
 
+    ctx.restore();
+  }
+
+  function drawHeartShape(x, y, s) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath();
+    ctx.moveTo(0, s * 0.6);
+    ctx.bezierCurveTo(s * 1.2, -s * 0.2, s * 0.6, -s * 1.3, 0, -s * 0.5);
+    ctx.bezierCurveTo(-s * 0.6, -s * 1.3, -s * 1.2, -s * 0.2, 0, s * 0.6);
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
   }
 
@@ -544,14 +817,12 @@
     const dt = Math.min(0.05, (now - state.lastTime) / 1000);
     state.lastTime = now;
 
+    state.time += dt;
     if (state.running && !state.paused) {
       update(dt);
     } else {
-      // Still animate clouds on title screen
-      for (const c of state.clouds) {
-        c.x += c.speed * dt;
-        if (c.x - c.r > W) c.x = -c.r;
-      }
+      // Still animate background on title / pause screen
+      updateBackground(dt);
     }
 
     draw();

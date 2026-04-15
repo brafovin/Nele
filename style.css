@@ -67,7 +67,7 @@ body {
 
 #game {
   display: block;
-  background: linear-gradient(180deg, #bfe8ff 0%, #e0f5ff 45%, #d9f7d9 100%);
+  background: #2a1b4e;
 }
 
 .overlay {
