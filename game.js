@@ -31,8 +31,8 @@
   const kitty = {
     x: W / 2,
     y: H - 90,
-    w: 110,
-    h: 110,
+    w: 85,
+    h: 115,
     speed: 440, // px/sec (keyboard)
     targetX: W / 2,
     facing: 1,
@@ -616,7 +616,7 @@
     drawHeartShape(w * 0.15, h * 0.53, 2.5);
     ctx.restore();
 
-    // --- Dress (multi-layer skirt) ---
+    // --- Dress (multi-layer skirt, slim silhouette) ---
     // Back/darker layer
     const dressBack = ctx.createLinearGradient(0, h * 0.0, 0, h * 0.58);
     dressBack.addColorStop(0, "#d63384");
@@ -625,10 +625,10 @@
     ctx.strokeStyle = "#7a1f4a";
     ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.moveTo(-w * 0.38, h * 0.06);
-    ctx.quadraticCurveTo(-w * 0.55, h * 0.58, -w * 0.5, h * 0.58);
-    ctx.lineTo(w * 0.5, h * 0.58);
-    ctx.quadraticCurveTo(w * 0.55, h * 0.58, w * 0.38, h * 0.06);
+    ctx.moveTo(-w * 0.30, h * 0.06);
+    ctx.quadraticCurveTo(-w * 0.40, h * 0.58, -w * 0.38, h * 0.58);
+    ctx.lineTo(w * 0.38, h * 0.58);
+    ctx.quadraticCurveTo(w * 0.40, h * 0.58, w * 0.30, h * 0.06);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -639,10 +639,10 @@
     dressFront.addColorStop(1, "#ff7ab0");
     ctx.fillStyle = dressFront;
     ctx.beginPath();
-    ctx.moveTo(-w * 0.34, h * 0.08);
-    ctx.quadraticCurveTo(-w * 0.48, h * 0.48, -w * 0.44, h * 0.48);
-    ctx.lineTo(w * 0.44, h * 0.48);
-    ctx.quadraticCurveTo(w * 0.48, h * 0.48, w * 0.34, h * 0.08);
+    ctx.moveTo(-w * 0.27, h * 0.08);
+    ctx.quadraticCurveTo(-w * 0.35, h * 0.48, -w * 0.33, h * 0.48);
+    ctx.lineTo(w * 0.33, h * 0.48);
+    ctx.quadraticCurveTo(w * 0.35, h * 0.48, w * 0.27, h * 0.08);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -650,12 +650,12 @@
     // Lace frill (scalloped) at top layer bottom
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    for (let i = 0; i <= 12; i++) {
-      const px = -w * 0.46 + (i / 12) * w * 0.92;
-      ctx.arc(px, h * 0.48, 4, 0, Math.PI, false);
+    for (let i = 0; i <= 10; i++) {
+      const px = -w * 0.36 + (i / 10) * w * 0.72;
+      ctx.arc(px, h * 0.48, 3.5, 0, Math.PI, false);
     }
-    ctx.lineTo(w * 0.46, h * 0.52);
-    ctx.lineTo(-w * 0.46, h * 0.52);
+    ctx.lineTo(w * 0.36, h * 0.52);
+    ctx.lineTo(-w * 0.36, h * 0.52);
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = "#d63384";
@@ -666,8 +666,8 @@
     ctx.fillStyle = "#ff3d79";
     ctx.strokeStyle = "#7a1f4a";
     ctx.lineWidth = 1.5;
-    ctx.fillRect(-w * 0.36, h * 0.08, w * 0.72, 6);
-    ctx.strokeRect(-w * 0.36, h * 0.08, w * 0.72, 6);
+    ctx.fillRect(-w * 0.28, h * 0.08, w * 0.56, 6);
+    ctx.strokeRect(-w * 0.28, h * 0.08, w * 0.56, 6);
     // waist bow (center)
     ctx.beginPath();
     ctx.ellipse(-10, h * 0.11, 10, 7, -0.25, 0, Math.PI * 2);
@@ -696,28 +696,28 @@
       drawSparkle(sx, sy, 1.3);
     }
 
-    // --- Arms (white with pink paws) ---
+    // --- Arms (white with pink paws, slimmer) ---
     ctx.strokeStyle = "#333";
     ctx.lineWidth = 2.5;
     // left arm
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.ellipse(-w * 0.44, h * 0.18, 11, 19, -0.45, 0, Math.PI * 2);
+    ctx.ellipse(-w * 0.36, h * 0.2, 8, 19, -0.35, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = "#ffb6d5";
     ctx.beginPath();
-    ctx.arc(-w * 0.47, h * 0.32, 4.5, 0, Math.PI * 2);
+    ctx.arc(-w * 0.40, h * 0.33, 3.8, 0, Math.PI * 2);
     ctx.fill();
     // right arm
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.ellipse(w * 0.44, h * 0.18, 11, 19, 0.45, 0, Math.PI * 2);
+    ctx.ellipse(w * 0.36, h * 0.2, 8, 19, 0.35, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = "#ffb6d5";
     ctx.beginPath();
-    ctx.arc(w * 0.47, h * 0.32, 4.5, 0, Math.PI * 2);
+    ctx.arc(w * 0.40, h * 0.33, 3.8, 0, Math.PI * 2);
     ctx.fill();
 
     // --- Pearl necklace with heart pendant ---
