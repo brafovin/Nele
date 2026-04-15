@@ -1,0 +1,144 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: "Comic Sans MS", "Chalkboard SE", "Segoe UI", sans-serif;
+  background: linear-gradient(180deg, #ffd1e8 0%, #ffe7f3 40%, #fff5fb 100%);
+  color: #6b2a52;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.game-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.hud {
+  display: flex;
+  gap: 24px;
+  background: #fff;
+  padding: 10px 22px;
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(255, 105, 160, 0.35);
+  border: 3px solid #ff8fc0;
+  min-width: 420px;
+  justify-content: space-around;
+  font-weight: bold;
+}
+
+.hud-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.hud-item .label {
+  font-size: 12px;
+  color: #b84a84;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.hud-item span:last-child {
+  font-size: 20px;
+  color: #d63384;
+}
+
+.canvas-frame {
+  position: relative;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 6px solid #ff8fc0;
+  box-shadow: 0 12px 30px rgba(214, 51, 132, 0.35);
+  background: #ffeaf5;
+}
+
+#game {
+  display: block;
+  background: linear-gradient(180deg, #bfe8ff 0%, #e0f5ff 45%, #d9f7d9 100%);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 230, 243, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  backdrop-filter: blur(4px);
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay h1 {
+  font-size: 56px;
+  color: #d63384;
+  text-shadow: 3px 3px 0 #fff, 6px 6px 0 rgba(214, 51, 132, 0.25);
+  margin-bottom: 4px;
+}
+
+.overlay .subtitle {
+  font-size: 22px;
+  color: #b84a84;
+  margin-bottom: 24px;
+}
+
+.overlay .instructions {
+  font-size: 16px;
+  line-height: 1.7;
+  color: #6b2a52;
+  background: #fff;
+  padding: 16px 22px;
+  border-radius: 16px;
+  border: 2px dashed #ff8fc0;
+  margin-bottom: 22px;
+}
+
+.overlay button {
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(180deg, #ff6fae, #d63384);
+  border: none;
+  padding: 14px 34px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 6px 0 #a1246a, 0 10px 20px rgba(214, 51, 132, 0.45);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.overlay button:hover {
+  transform: translateY(-2px);
+}
+
+.overlay button:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 #a1246a, 0 5px 10px rgba(214, 51, 132, 0.45);
+}
+
+.controls-hint {
+  font-size: 13px;
+  color: #b84a84;
+  background: #fff;
+  padding: 6px 18px;
+  border-radius: 999px;
+  border: 2px solid #ffc0dc;
+}

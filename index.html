@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hello Kitty – Herzen fangen</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="game-wrapper">
+    <header class="hud">
+      <div class="hud-item">
+        <span class="label">Punkte</span>
+        <span id="score">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="label">Leben</span>
+        <span id="lives">❤❤❤</span>
+      </div>
+      <div class="hud-item">
+        <span class="label">Level</span>
+        <span id="level">1</span>
+      </div>
+    </header>
+
+    <div class="canvas-frame">
+      <canvas id="game" width="640" height="720"></canvas>
+
+      <div id="overlay" class="overlay">
+        <h1>Hello Kitty</h1>
+        <p class="subtitle">Herzen fangen!</p>
+        <p class="instructions">
+          Bewege Hello Kitty mit den <b>Pfeiltasten</b> oder der <b>Maus</b>.<br />
+          Fange Herzen 💖, Sterne ⭐ und Schleifen 🎀.<br />
+          Weiche Gewitterwolken ⛈ aus!
+        </p>
+        <button id="startBtn">Spiel starten</button>
+      </div>
+    </div>
+
+    <footer class="controls-hint">
+      ← → bewegen &nbsp;·&nbsp; Maus folgen &nbsp;·&nbsp; P = Pause
+    </footer>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
